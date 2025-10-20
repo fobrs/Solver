@@ -1,6 +1,5 @@
 using System;
 
-using Microsoft.EntityFrameworkCore;
 using Solver.Models;
 using HWChargeOptimizer.Reporter;
 using Microsoft.Extensions.Options;
@@ -13,8 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 
-builder.Services.AddDbContext<TodoDb>(opt => opt.UseInMemoryDatabase("TodoList"));
-//builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument(config =>
 {
@@ -49,41 +46,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
-app.MapPost("/solver", async(SolverModel todo, TodoDb db) =>
+app.MapPost("/solver", async(SolverModel todo) =>
 {
-    //db.Todos.Add(todo);
-    //await db.SaveChangesAsync();
-
     string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
-    Console.WriteLine(json);
+    Console.WriteLine(json);   
 
-
-    
     var configBuilder = new ConfigurationBuilder().AddJsonStream(new MemoryStream(System.Text.Encoding.ASCII.GetBytes(json))).Build();
-   
-
-
     var builder = Host.CreateApplicationBuilder(args);
     builder.Configuration.AddConfiguration(configBuilder);
-
-    builder.Services.AddTransient<ChargeScheduleReporter>();
-    var section = builder.Configuration.GetSection("SolverConfig");
-    builder.Services.Configure <SolverModel>(section);
-    builder.Services.AddOptions();
-
-   
-    //builder.Services.AddSingleton<IHomeWizardBatteryController, HomeWizardBatteryController>();
+    builder.Services.AddTransient<ChargeScheduleReporter>();   
     var reportHost = builder.Build();
-    var option1 = reportHost.Services.GetRequiredService < IOptionsMonitor<SolverModel>>();
     var reporter = reportHost.Services.GetRequiredService<ChargeScheduleReporter>();
     await reporter.RunAsync(todo);
 
     SolverResults res = new SolverResults();
-    res.Id = 100;
     res.Name = "test";
     res.IsComplete = true;
-
 
     return Results.Created($"/solver/{todo.Id}", res);
 });

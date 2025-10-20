@@ -158,15 +158,15 @@ public class ChargeScheduleReporter
             Console.WriteLine("No current tariffs available in the tariff list.");
             return;
         }
-       // double last_price = 0.0;
-       // for (int i = 0; i < tariffs.Count; i++)
+        // double last_price = 0.0;
+        // for (int i = 0; i < tariffs.Count; i++)
         //{
-          //  if (tariffs[i].Price_ != null)
-           // {
-            //    tariffs[i].Price = last_price = tariffs[i].Price_ ?? last_price;
-           // }
-            //else
-             //   tariffs[i].Price = last_price;
+        //  if (tariffs[i].Price_ != null)
+        // {
+        //    tariffs[i].Price = last_price = tariffs[i].Price_ ?? last_price;
+        // }
+        //else
+        //   tariffs[i].Price = last_price;
         //}
 
         var maxChargingRate = batteryCfg.MaxChargeRateKWh;
@@ -183,7 +183,7 @@ public class ChargeScheduleReporter
             Console.WriteLine("No current state of charge is stored in the configuration file. Please let the application read the state of charge from the Homewizard battery first before running the report or chart function.");
             return;
         }
-
+        // fill in part_of_hour
         for (var i = 1; i < tariffs.Count; i++)
         {
             var prevHour = tariffs[i - 1].Date;
@@ -244,7 +244,7 @@ public class ChargeScheduleReporter
         {
             throw new InvalidOperationException("Failed to create SCIP solver");
         }
-        // Sets a time limit of 10 seconds.
+        // Sets a time limit of 30 seconds.
         solver.SetTimeLimit(30 * 1000);
         OptimizeSchedule.taxes = taxes;
 
@@ -254,7 +254,7 @@ public class ChargeScheduleReporter
         TimeSpan ts = stopWatch.Elapsed;
         Console.WriteLine("-----------------------------------------------------------");
         Console.WriteLine("finsihed after {0:F2} ms", ts.TotalMilliseconds);
-        
+
         // Display results
         if (resultStatus is Google.OrTools.LinearSolver.Solver.ResultStatus.OPTIMAL or Google.OrTools.LinearSolver.Solver.ResultStatus.FEASIBLE)
         {
@@ -283,7 +283,7 @@ public class ChargeScheduleReporter
             var totalValue = 0.0;
             for (int i = 0; i < tariffs.Count; i++)
             {
-                
+
                 //totalCost += delta * ((tariffs[i].pv - 0.300) > 0 ? 0.0 : tariffs[i].Price) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue();
                 totalCost += (tariffs[i].Price - taxes) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].part_of_hour;
                 totalValue += tariffs[i].Price * scheduleVariables.DischargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].part_of_hour;
@@ -295,159 +295,10 @@ public class ChargeScheduleReporter
             Console.WriteLine($"Net cost:              € {totalCost - totalValue,5:F2}");
             Console.WriteLine("-----------------------------------------------------------");
 
-                //if (generateChart)
-                //    CreateBatterySchedulePlot(tariffs, scheduleVariables.ChargeAmount, scheduleVariables.DischargeAmount, scheduleVariables.StateOfCharge);
         }
         else
         {
             Console.WriteLine("No solution found. Setting battery to zero charging mode.");
         }
     }
-
-    private static void CreateBatterySchedulePlot(List<Tariff> tariffs,
-        Dictionary<DateTimeOffset, Variable> chargeAmount,
-        Dictionary<DateTimeOffset, Variable> dischargeAmount,
-        Dictionary<DateTimeOffset, Variable> stateOfCharge)
-    {
-        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(SystemTimeZone);
-
-        // convert tariff times to local time zone for plotting
-        foreach (var tariff in tariffs)
-        {
-            tariff.Date = TimeZoneInfo.ConvertTime(tariff.Date, timeZone);
-        }
-
-        // Create arrays for plotting
-        var times = new double[tariffs.Count];
-        var socValues = new double[tariffs.Count];
-        var chargeValues = new double[tariffs.Count];
-        var dischargeValues = new double[tariffs.Count];
-        var tariffValues = new double[tariffs.Count];
-        var timeLabels = new string[tariffs.Count];
-
-        // Fill arrays with data
-        for (var i = 0; i < tariffs.Count; i++)
-        {
-            var tariff = tariffs[i];
-            times[i] = i;
-            socValues[i] = stateOfCharge[tariff.Date].SolutionValue();
-            chargeValues[i] = chargeAmount[tariff.Date].SolutionValue();
-            dischargeValues[i] = dischargeAmount[tariff.Date].SolutionValue();
-            tariffValues[i] = tariff.Price;
-            timeLabels[i] = tariff.Date.ToString("HH");
-        }
-#if false
-        // Create plot
-        var plot = new Plot();
-
-        var fontLocation = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new InvalidOperationException("Cannot find executing assembly location."), @"Fonts/Roboto-VariableFont.ttf");
-        if (!File.Exists(fontLocation))
-            throw new InvalidOperationException($"Font file not found at {fontLocation}. Cannot create chart.");
-
-        Console.WriteLine("Using font file at " + fontLocation);
-
-        // Add a font file to use its typeface for fonts with a given name
-        Fonts.AddFontFile(
-            name: "Roboto",
-            path: Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new InvalidOperationException("Cannot find fonts."), @"Fonts/Roboto-VariableFont.ttf"));
-
-        plot.Font.Set("Roboto");
-
-        // change figure colors for dark mode
-        plot.FigureBackground.Color = Color.FromHex("#181818");
-        plot.DataBackground.Color = Color.FromHex("#1f1f1f");
-
-        // change axis and grid colors for dark mode
-        plot.Axes.Color(Color.FromHex("#d7d7d7"));
-        plot.Grid.MajorLineColor = Color.FromHex("#404040");
-
-        // change legend colors for dark mode
-        plot.Legend.BackgroundColor = Color.FromHex("#404040").WithAlpha(0.7); ;
-        plot.Legend.FontColor = Color.FromHex("#d7d7d7");
-        plot.Legend.OutlineColor = Color.FromHex("#d7d7d7");
-
-        // Add state of charge as a line with markers
-        var socPlot = plot.Add.Scatter(times, socValues);
-        socPlot.MarkerShape = MarkerShape.FilledCircle;
-        socPlot.MarkerSize = 5;
-        socPlot.LineWidth = 2;
-        socPlot.LineColor = Colors.Blue;
-        socPlot.MarkerColor = Colors.Blue;
-        socPlot.LegendText = "State of Charge";
-
-        for (var i = 0; i < times.Length; i++)
-        {
-            Bar chargeBar = new()
-            {
-                Value = chargeValues[i],
-                Position = times[i],
-                Size = 0.3,
-                FillColor = Colors.Purple.WithAlpha(0.7),
-                LineColor = Colors.Purple,
-            };
-
-            var barPlot = plot.Add.Bar(chargeBar);
-            if (i == 0)
-                barPlot.LegendText = "Charge";
-        }
-
-        for (var i = 0; i < times.Length; i++)
-        {
-            Bar dischargeBar = new()
-            {
-                Value = dischargeValues[i] * -1,
-                Position = times[i],
-                Size = 0.3,
-                FillColor = Colors.Green.WithAlpha(0.7),
-                LineColor = Colors.Green,
-            };
-
-            var barPlot = plot.Add.Bar(dischargeBar);
-            if (i == 0)
-                barPlot.LegendText = "Discharge";
-        }
-
-        // Create a second y-axis for tariff values
-        var rightAxis = plot.Axes.Right;
-        rightAxis.Label.Text = "Tariff (cents)";
-        rightAxis.IsVisible = true;
-
-        // Add tariff values on the right axis
-        var tariffPlot = plot.Add.Scatter(times, tariffValues);
-        tariffPlot.LineWidth = 2;
-        tariffPlot.LineColor = Colors.Orange;
-        tariffPlot.MarkerShape = MarkerShape.FilledDiamond;
-        tariffPlot.MarkerSize = 5;
-        tariffPlot.MarkerColor = Colors.Orange;
-        tariffPlot.LegendText = "Tariff";
-        tariffPlot.Axes.YAxis = plot.Axes.Right;
-
-        // Configure axes
-        plot.Axes.Bottom.Label.Text = "Time";
-        plot.Axes.Left.Label.Text = "Energy (kWh)";
-
-        // Add custom tick labels
-        plot.Axes.Bottom.TickGenerator = new ScottPlot.TickGenerators.NumericManual(
-            positions: times,
-            labels: timeLabels);
-        plot.Axes.Bottom.MajorTickStyle.Length = 0;
-
-        // Add legend
-        plot.Legend.IsVisible = true;
-        plot.Legend.Alignment = Alignment.UpperLeft;
-
-        // Add title
-        plot.Title("Battery Charge/Discharge Planned Schedule");
-
-        // set the color palette used when coloring new items added to the plot
-        plot.Add.Palette = new ScottPlot.Palettes.Penumbra();
-
-        var plotPath = Path.Combine(Environment.CurrentDirectory, $"battery-schedule-{DateTimeOffset.Now:dd-MM-yyyy-HHmmss}.png");
-
-        // Save the plot
-        plot.SavePng(plotPath, 1200, 600);
-
-        Console.WriteLine($"Chart saved to {plotPath}");
-#endif
-    }
-}
+ }

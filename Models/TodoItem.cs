@@ -2,28 +2,23 @@ namespace Solver.Models;
 
 
 public class SolverModel
-{
-    public int Id { get; set; }
+{   public int Id
+    {
+        get; set;
+    }
     public required SolverConfig SolverConfig { get; set; }
 }
 
 public class SolverConfig
 {
-    public int Id { get; set; }
     public string? Name { get; set; }
     public bool IsComplete { get; set; }
     public required BatteryConfiguration BatteryConfiguration { get; set; }
     public List<Tariff>? Tariffs { get; set; }
-    public List<Energy1>? ExpectedProduction { get; set; }
-    public List<Energy2>? ExpectedConsumption { get; set; }
 }
-
-
-
 
 public class BatteryConfiguration
 {
-     public int Id { get; set; }
     public required List<Battery> Batteries { get; set; }
     public required double MaxChargeRateKWh { get; set; }
     public required double MaxDischargeRateKWh { get; set; }
@@ -51,7 +46,6 @@ public class Battery
 
 public class Tariff
 {
-     public int Id { get; set; }
     [Newtonsoft.Json.JsonProperty("Date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     [Newtonsoft.Json.JsonConverter(typeof(DateFormatConverter))]
     public DateTimeOffset Date { get; set; }
@@ -59,28 +53,9 @@ public class Tariff
     //[Newtonsoft.Json.JsonProperty("Price")]
     public double Price { get; set; }
     public double pv { get; set; }
-    public float part_of_hour { get; set; }
+    public double consumption { get; set; }
+    public float part_of_hour { get; set; } // 1 is 1 hour intrevals, 4 is 15 minute intervals, we be filled in when used
 
-    //[Newtonsoft.Json.JsonProperty("dummy")]
-    //public double Price { get; set;  }
-}
-
-
-public class Energy1
-{
-    public int Id { get; set; }
-    [Newtonsoft.Json.JsonProperty("Date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-    [Newtonsoft.Json.JsonConverter(typeof(DateFormatConverter))]   
-    public DateTimeOffset Date { get; set; }
-    public double Power { get; set; }
-}
-public class Energy2
-{
-    public int Id { get; set; }
-    [Newtonsoft.Json.JsonProperty("Date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-    [Newtonsoft.Json.JsonConverter(typeof(DateFormatConverter))]
-    public DateTimeOffset Date { get; set; }
-    public double Power { get; set; }
 }
 
 public class SolverResults
