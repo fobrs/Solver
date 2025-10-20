@@ -1,0 +1,6 @@
+@Solver_HostAddress = http://localhost:5002
+
+GET {{Solver_HostAddress}}/solver/
+Accept: application/json
+
+###

@@ -1,0 +1,47 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C#: Solver [http]",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/Solver.csproj",
+            "launchConfigurationId": "TargetFramework=;http"
+        },
+        {
+            "name": ".NET Core SSH Attach",
+            "type": "coreclr",
+            "request": "attach",
+            "targetArchitecture": "x86_64",
+            //"processId": "${command:pickRemoteProcess}",
+            "pipeTransport": {
+                "pipeProgram": "ssh",
+                "pipeArgs": [ "-T", "fo@diskstation3" ],
+                "debuggerPath": "~/projects/dotnet/vsdbg/vsdbg",
+                //"pipeCwd": "${workspaceRoot}",
+                //"pipeCwd": "/volume1/homes/fo/projects/dotnet/Solver",
+                "quoteArgs": true
+            },
+            "sourceFileMap": {
+               "/volume1/homes/fo/projects/dotnet/Solver": "${workspaceRoot}"
+            },
+            "justMyCode":true,
+            "symbolOptions": {
+                "searchPaths": [
+                    "/volume1/homes/fo/projects/dotnet/Solver/bin/Debug/net9.0"
+                ],
+                "searchMicrosoftSymbolServer": true,
+                "searchNuGetOrgSymbolServer": true,
+                "cachePath": "/symcache"
+            },
+            "logging": {
+               "diagnosticsLog": {
+                    "protocolMessages": false
+                }
+            }
+        }
+    ]
+}
