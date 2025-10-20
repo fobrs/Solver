@@ -104,7 +104,7 @@ public static class OptimizeSchedule
         {
             var prevHour = scheduleVariables.Tariffs[i - 1].Date;
             var currHour = scheduleVariables.Tariffs[i].Date;
-            float delta = (currHour.ToUnixTimeSeconds() - prevHour.ToUnixTimeSeconds()) / 3600.0f;
+            float delta = 1.0f / scheduleVariables.Tariffs[i-1].part_of_hour;
 
             solver.Add(scheduleVariables.StateOfCharge[currHour] == scheduleVariables.StateOfCharge[prevHour]
                 + delta * scheduleVariables.ChargeAmount[prevHour] * scheduleVariables.ChargingEfficiency
