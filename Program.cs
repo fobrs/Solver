@@ -46,20 +46,35 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapPost("/solver", async(SolverModel todo) =>
+//app.MapPost("/solver", async(SolverModel todo) =>
+//{
+app.MapPost("/solver", //async(SolverModel todo) =>
+   async (HttpRequest request) =>
 {
-    string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
-   // Console.WriteLine(json);   
+    try
+    {
+        SolverModel todo = await request.ReadFromJsonAsync<SolverModel>();
 
-    var configBuilder = new ConfigurationBuilder().Build();
-    var builder = Host.CreateApplicationBuilder(args);
-    builder.Configuration.AddConfiguration(configBuilder);
-    builder.Services.AddTransient<ChargeScheduleReporter>();   
-    var reportHost = builder.Build();
-    var reporter = reportHost.Services.GetRequiredService<ChargeScheduleReporter>();
-    SolverResults res = await reporter.RunAsync(todo);
+        //string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
+        // Console.WriteLine(json);   
 
-    return Results.Created($"/solver/{todo.Id}", res);
+        var configBuilder = new ConfigurationBuilder().Build();
+        var builder = Host.CreateApplicationBuilder(args);
+        builder.Configuration.AddConfiguration(configBuilder);
+        builder.Services.AddTransient<ChargeScheduleReporter>();
+        var reportHost = builder.Build();
+        var reporter = reportHost.Services.GetRequiredService<ChargeScheduleReporter>();
+        SolverResults res = await reporter.RunAsync(todo);
+
+        return Results.Created($"/solver/{todo.Id}", res);
+    }
+    catch (Exception ex)
+    {
+        SolverResults res = new SolverResults();
+        res.IsComplete = false;
+        res.ResultStatus = "Exception";
+       return Results.Created($"/solver/{0}", res);
+    }
 });
 
 app.Run();
