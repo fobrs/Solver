@@ -175,7 +175,8 @@ public class ChargeScheduleReporter
         //}
 
         var maxChargingRate = batteryCfg.MaxChargeRateKWh;
-        var maxDischargingRate = batteryCfg.MaxDischargeRateKWh;
+        //var maxDischargingRate = batteryCfg.MaxDischargeRateKWh;
+        var maxDischargingRate = 0.6;
 
         var chargingEfficiency = batteryCfg.ChargingEfficiency;
         var dischargingEfficiency = batteryCfg.DischargingEfficiency;
@@ -287,7 +288,7 @@ public class ChargeScheduleReporter
                     Date = tariff.Date,
                     ChargeAmount = (float)charge,
                     DischargeAmount = (float)discharge,
-                    SoC = (float)soc
+                    SoC = (float) (soc / combinedBatteryCapacity)
                 });
 
 

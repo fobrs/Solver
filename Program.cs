@@ -48,10 +48,9 @@ app.UseHttpsRedirection();
 
 app.MapPost("/solver", async(SolverModel todo) =>
 {
-    //string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
-    //Console.WriteLine(json);   
+    string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
+   // Console.WriteLine(json);   
 
-    //var configBuilder = new ConfigurationBuilder().AddJsonStream(new MemoryStream(System.Text.Encoding.ASCII.GetBytes(json))).Build();
     var configBuilder = new ConfigurationBuilder().Build();
     var builder = Host.CreateApplicationBuilder(args);
     builder.Configuration.AddConfiguration(configBuilder);
