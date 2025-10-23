@@ -132,12 +132,16 @@ public class ChargeScheduleReporter
         config = _config.CurrentValue;
     }
 
-    public async Task RunAsync(SolverModel todo, bool generateChart = false)
+    public async Task<SolverResults> RunAsync(SolverModel todo)
     {
         await Task.Delay(1);
+        SolverResults res = new SolverResults();
+        res.Name = "Solver";
+        res.IsComplete = false;
+
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById(SystemTimeZone);
 
-        Console.WriteLine("Starting calculation of optimal charging schedule...");
+        //Console.WriteLine("Starting calculation of optimal charging schedule...");
 
         var currentUtcDateTime = DateTimeOffset.UtcNow;
         currentUtcDateTime = new DateTimeOffset(currentUtcDateTime.Year, currentUtcDateTime.Month, currentUtcDateTime.Day, currentUtcDateTime.Hour, 0, 0, currentUtcDateTime.Offset);
@@ -155,8 +159,9 @@ public class ChargeScheduleReporter
         var tariffs = cfg.SolverConfig.Tariffs;
         if (tariffs == null || tariffs.Count == 0)
         {
-            Console.WriteLine("No current tariffs available in the tariff list.");
-            return;
+            res.ResultStatus = "No current tariffs available in the tariff list.";
+            Console.WriteLine(res.ResultStatus);
+            return res;
         }
         // double last_price = 0.0;
         // for (int i = 0; i < tariffs.Count; i++)
@@ -180,8 +185,9 @@ public class ChargeScheduleReporter
 
         if (currentStateOfCharge is null)
         {
-            Console.WriteLine("No current state of charge is stored in the configuration file. Please let the application read the state of charge from the Homewizard battery first before running the report or chart function.");
-            return;
+            res.ResultStatus = "No current state of charge is stored in the configuration file. Please let the application read the state of charge from the Homewizard battery first before running the report or chart function.";
+            Console.WriteLine(res.ResultStatus);
+            return res;
         }
         // fill in part_of_hour
         for (var i = 1; i < tariffs.Count; i++)
@@ -239,12 +245,9 @@ public class ChargeScheduleReporter
         Stopwatch stopWatch = new Stopwatch();
         stopWatch.Start();
         // Create the solver that will calculate the most efficient charging
-        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("SCIP");
-        if (solver == null)
-        {
-            throw new InvalidOperationException("Failed to create SCIP solver");
-        }
+        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("SCIP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
         // Sets a time limit of 30 seconds.
+
         solver.SetTimeLimit(30 * 1000);
         OptimizeSchedule.taxes = taxes;
 
@@ -258,9 +261,13 @@ public class ChargeScheduleReporter
         // Display results
         if (resultStatus is Google.OrTools.LinearSolver.Solver.ResultStatus.OPTIMAL or Google.OrTools.LinearSolver.Solver.ResultStatus.FEASIBLE)
         {
-            Console.WriteLine("Resultstatus: {0}", resultStatus.ToString());
-            Console.WriteLine("-----------------------------------------------------------");
-            Console.WriteLine("Local time  | C | D |  CQ   |  DQ   |  SoC | Tariff | pv");
+            //Console.WriteLine("Resultstatus: {0}", resultStatus.ToString());
+            //Console.WriteLine("-----------------------------------------------------------");
+            //Console.WriteLine("Local time  | C | D |  CQ   |  DQ   |  SoC | Tariff | pv");
+
+
+            res.ResultStatus = resultStatus.ToString();
+            res.Results = new List<Result>();
 
             foreach (var tariff in tariffs)
             {
@@ -274,8 +281,18 @@ public class ChargeScheduleReporter
                 var chargingStatus = charge > RoundingFactor ? "Y" : " ";
                 var dischargingStatus = discharge > RoundingFactor ? "Y" : " ";
 
-                Console.WriteLine(
-                    $"{TimeZoneInfo.ConvertTime(tariff.Date, timeZone):dd/MM HH:mm} | {chargingStatus} | {dischargingStatus} | {charge,5:F2} | {discharge,5:F2} | {soc,3:F2} | {tariff.Price:F5}| {tariff.pv:F5}");
+
+                res.Results.Add(new Result
+                {
+                    Date = tariff.Date,
+                    ChargeAmount = (float)charge,
+                    DischargeAmount = (float)discharge,
+                    SoC = (float)soc
+                });
+
+
+                //Console.WriteLine(
+                //    $"{TimeZoneInfo.ConvertTime(tariff.Date, timeZone):dd/MM HH:mm} | {chargingStatus} | {dischargingStatus} | {charge,5:F2} | {discharge,5:F2} | {soc,3:F2} | {tariff.Price:F5}| {tariff.pv:F5}");
             }
 
             // Calculate net cost
@@ -289,16 +306,22 @@ public class ChargeScheduleReporter
                 totalValue += tariffs[i].Price * scheduleVariables.DischargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].part_of_hour;
             }
 
-            Console.WriteLine("-----------------------------------------------------------");
-            Console.WriteLine($"Total charging cost:   € {totalCost,5:F2}", totalCost);
-            Console.WriteLine($"Total discharge cost:  € {totalValue,5:F2}", totalValue);
+            res.IsComplete = true;
+            res.ChargePrice = (float)totalCost;
+            res.DischargePrice = (float)totalValue;
+
+            //Console.WriteLine("-----------------------------------------------------------");
+            //Console.WriteLine($"Total charging cost:   € {totalCost,5:F2}", totalCost);
+            //Console.WriteLine($"Total discharge cost:  € {totalValue,5:F2}", totalValue);
             Console.WriteLine($"Net cost:              € {totalCost - totalValue,5:F2}");
             Console.WriteLine("-----------------------------------------------------------");
 
         }
         else
         {
-            Console.WriteLine("No solution found. Setting battery to zero charging mode.");
+            res.ResultStatus = "No solution found. Setting battery to zero charging mode.";
         }
+        return res;
     }
+   
  }

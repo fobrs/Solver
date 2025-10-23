@@ -7,7 +7,9 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> 
   </PropertyGroup>
-
+ <PropertyGroup>
+   <RestoreSources>./package;$(RestoreSources)</RestoreSources>
+ </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Google.OrTools" Version="9.14.*" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9"/>

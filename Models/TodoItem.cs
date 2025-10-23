@@ -58,6 +58,18 @@ public class Tariff
 
 }
 
+public class Result
+{
+   [Newtonsoft.Json.JsonProperty("Date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+    [Newtonsoft.Json.JsonConverter(typeof(DateFormatConverter))]
+    public DateTimeOffset Date { get; set; }
+
+    public float ChargeAmount { get; set; }
+    public float DischargeAmount { get; set; }  
+
+    public float SoC { get; set; }
+}
+
 public class SolverResults
 {
     public int Id
@@ -66,6 +78,13 @@ public class SolverResults
     }
     public string? Name { get; set; }
     public bool IsComplete { get; set; }
+
+    public string? ResultStatus { get; set; }
+
+    public float ChargePrice { get; set; }
+    public float DischargePrice { get; set; }
+
+    public List<Result>? Results { get; set; }
 }
 
 
