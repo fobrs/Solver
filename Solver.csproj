@@ -8,7 +8,7 @@
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> 
   </PropertyGroup>
  <PropertyGroup>
-   <RestoreSources>./package;$(RestoreSources)</RestoreSources>
+   <RestoreAdditionalProjectSources>./package;$(RestoreSources)</RestoreAdditionalProjectSources>
  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Google.OrTools" Version="9.14.*" />
