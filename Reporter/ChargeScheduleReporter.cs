@@ -32,7 +32,7 @@ public class ScheduleVariables
 
 public static class OptimizeSchedule
 {
-    public const bool charge_with_solar_only = true;
+    public static bool charge_with_solar_only = true;
     // Use a slightly increased factor to favor discharging on financially interesting moments
     private const double DischargeFactor = 1.01;
 
@@ -90,9 +90,9 @@ public static class OptimizeSchedule
 
             // Cost of charging and value of discharging
 
-            if (false /*charge_with_solar_only*/)
-                objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.pv - scheduleVariables.DefaultConsumptionWithSolar) >= 0 ? 0.0 : (tariff.Price - taxes));
-            else
+            //if (false /*charge_with_solar_only*/)
+            //    objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.pv - scheduleVariables.DefaultConsumptionWithSolar) >= 0 ? 0.0 : (tariff.Price - taxes));
+            //else
                 objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.Price - taxes));
 
             objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], -tariff.Price * DischargeFactor);
@@ -255,6 +255,7 @@ public class ChargeScheduleReporter
 
         solver.SetTimeLimit(30 * 1000);
         OptimizeSchedule.taxes = cfg.SolverConfig.Taxes;
+        OptimizeSchedule.charge_with_solar_only = cfg.SolverConfig.DefaultConsumptionWithSolar >= 0.0;
 
         var resultStatus = OptimizeSchedule.Calculate(solver, scheduleVariables);
 

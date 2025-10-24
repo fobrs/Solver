@@ -53,8 +53,9 @@ app.MapPost("/solver", //async(SolverModel todo) =>
 {
     try
     {
-        SolverModel todo = await request.ReadFromJsonAsync<SolverModel>();
-
+        SolverModel? todo = await request.ReadFromJsonAsync<SolverModel>();
+        if (todo == null)
+            throw(new Exception("SolverModel is null!"));
         //string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
         // Console.WriteLine(json);   
 
@@ -70,9 +71,12 @@ app.MapPost("/solver", //async(SolverModel todo) =>
     }
     catch (Exception ex)
     {
-        SolverResults res = new SolverResults();
-        res.IsComplete = false;
-        res.ResultStatus = "Exception";
+        SolverResults res = new SolverResults {
+            IsComplete = false,
+            ResultStatus = ex.Message,
+            ChargePrice = 0.0f,
+            DischargePrice = 0.0f,
+        };
        return Results.Created($"/solver/{0}", res);
     }
 });
