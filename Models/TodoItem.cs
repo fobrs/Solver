@@ -55,6 +55,7 @@ public class Tariff
     [Newtonsoft.Json.JsonProperty("Price", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     //[Newtonsoft.Json.JsonProperty("Price")]
     public double Price { get; set; }
+    public double PriceExported { get; set; } = 0; // calculated
     public double pv { get; set; }
     public double consumption { get; set; }
     public float part_of_hour { get; set; } // 1 is 1 hour intrevals, 4 is 15 minute intervals, we be filled in when used

@@ -34,7 +34,7 @@ public static class OptimizeSchedule
 {
     public static bool charge_with_solar_only = true;
     // Use a slightly increased factor to favor discharging on financially interesting moments
-    private const double DischargeFactor = 1.01;
+    private const double DischargeFactor = 1.0;
 
     public static float taxes;
 
@@ -93,7 +93,7 @@ public static class OptimizeSchedule
             //if (false /*charge_with_solar_only*/)
             //    objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.pv - scheduleVariables.DefaultConsumptionWithSolar) >= 0 ? 0.0 : (tariff.Price - taxes));
             //else
-                objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.Price - taxes));
+                objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.PriceExported));
 
             objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], -tariff.Price * DischargeFactor);
         }
@@ -122,10 +122,12 @@ public static class OptimizeSchedule
 public class ChargeScheduleReporter
 {
     private const string SystemTimeZone = "W. Europe Standard Time";
-    //private const float taxes = 0.1088f;
+    private const double VAT = 1.21;
+
 
     // Use a slightly increased factor to avoid floating point precision issues in the solver
     private const double RoundingFactor = 0.01;
+
 
     private SolverModel config;
 
@@ -202,6 +204,15 @@ public class ChargeScheduleReporter
             tariffs[i - 1].part_of_hour = 1.0f / delta;
         }
         tariffs[tariffs.Count - 1].part_of_hour = tariffs[tariffs.Count - 2].part_of_hour;
+
+        for (var i = 0; i < tariffs.Count; i++)
+        {
+            tariffs[i].PriceExported = tariffs[i].Price;
+            if (cfg.SolverConfig.Taxes > 0)
+            {
+                tariffs[i].PriceExported = (tariffs[i].Price - cfg.SolverConfig.Taxes) / VAT;
+            }
+        }
 
 
         var scheduleVariables = new ScheduleVariables
