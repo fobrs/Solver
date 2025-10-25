@@ -261,7 +261,7 @@ public class ChargeScheduleReporter
         Stopwatch stopWatch = new Stopwatch();
         stopWatch.Start();
         // Create the solver that will calculate the most efficient charging
-        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("SCIP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
+        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("CLP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
         // Sets a time limit of 30 seconds.
 
         solver.SetTimeLimit(30 * 1000);
@@ -273,7 +273,7 @@ public class ChargeScheduleReporter
         stopWatch.Stop();
         TimeSpan ts = stopWatch.Elapsed;
         Console.WriteLine("-----------------------------------------------------------");
-        Console.WriteLine("finsihed after {0:F2} ms", ts.TotalMilliseconds);
+        Console.WriteLine("finsihed after {0:F2} ms, {1}", ts.TotalMilliseconds, resultStatus);
 
         // Display results
         if (resultStatus is Google.OrTools.LinearSolver.Solver.ResultStatus.OPTIMAL or Google.OrTools.LinearSolver.Solver.ResultStatus.FEASIBLE)
