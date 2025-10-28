@@ -27,6 +27,12 @@ public class BatteryConfiguration
     public required double MaxDischargeRateKWh { get; set; }
     public required double ChargingEfficiency { get; set; }
     public required double DischargingEfficiency { get; set; }
+
+    /// <summary>
+    /// Stores the latest battery mode.
+    /// Possible values: 'zero', 'to_full', 'standby'
+    /// </summary>
+    public string BatteryMode { get; set; }
 }
 
 public class Battery
@@ -56,22 +62,49 @@ public class Tariff
     //[Newtonsoft.Json.JsonProperty("Price")]
     public double Price { get; set; }
     public double PriceExported { get; set; } = 0; // calculated
-    public double pv { get; set; }
-    public double consumption { get; set; }
-    public float part_of_hour { get; set; } // 1 is 1 hour intrevals, 4 is 15 minute intervals, we be filled in when used
+    public bool PricePredicted { get; set; } = false; // indicate if price is from price forecast data
+    public double Pv { get; set; }
+    public double PvMinUsed { get; set; }
+    public double Consumption { get; set; }
+    public double ConsumptionStDev { get; set; }
+    public float Part_of_hour { get; set; } // 1 is 1 hour intrevals, 4 is 15 minute intervals, we be filled in when used
 
 }
 
+public struct BatteryMode
+{
+    /// <summary>
+    /// NOM modus, battery tries to keep house at 0 kWh consumption.
+    /// </summary>
+    public const string Zero = "zero";
+
+    /// <summary>
+    /// Forced full charge mode, battery will charge to 100% regardless of consumption.
+    /// </summary>
+    public const string ToFull = "to_full";
+
+    /// <summary>
+    /// Battery will not charge or discharge, it will only keep the current state.
+    /// </summary>
+    public const string Standby = "standby";
+}
 public class Result
 {
-   [Newtonsoft.Json.JsonProperty("Date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+    [Newtonsoft.Json.JsonProperty("Date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     [Newtonsoft.Json.JsonConverter(typeof(DateFormatConverter))]
     public DateTimeOffset Date { get; set; }
 
     public float ChargeAmount { get; set; }
-    public float DischargeAmount { get; set; }  
+    public float DischargeAmount { get; set; }
+
+    public string BatteryMode { get; set; }
 
     public float SoC { get; set; }
+
+    public bool PricePredicted { get; set; } // if true Price is price prediction past day ahead prices
+    public double Price { get; set; }
+    public float Part_of_hour { get; set; } // 1 is 1 hour intrevals, 4 is 15 minute intervals, we be filled in when used
+
 }
 
 public class SolverResults

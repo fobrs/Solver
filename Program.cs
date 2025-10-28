@@ -57,9 +57,12 @@ app.MapPost("/solver", //async(SolverModel todo) =>
         if (todo == null)
             throw(new Exception("SolverModel is null!"));
         //string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
-        // Console.WriteLine(json);   
+        //Console.WriteLine(json);   
 
-        var configBuilder = new ConfigurationBuilder().Build();
+        var configBuilder = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                    .Build();
         var builder = Host.CreateApplicationBuilder(args);
         builder.Configuration.AddConfiguration(configBuilder);
         builder.Services.AddTransient<ChargeScheduleReporter>();
@@ -71,6 +74,7 @@ app.MapPost("/solver", //async(SolverModel todo) =>
     }
     catch (Exception ex)
     {
+        Console.WriteLine(ex.Message);  
         SolverResults res = new SolverResults {
             IsComplete = false,
             ResultStatus = ex.Message,
