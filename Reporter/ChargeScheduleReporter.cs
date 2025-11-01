@@ -63,7 +63,8 @@ public static class OptimizeSchedule
                     $"charge_{tariff.Date}");
             
             else
-                scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(0.0, scheduleVariables.MaxChargingRate, $"charge_{tariff.Date}");
+                scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(   (tariff.PvMinUsed >= 0) ? (tariff.PvMinUsed) : 0.0,
+                scheduleVariables.MaxChargingRate, $"charge_{tariff.Date}");
 
             var maxD = (tariff.Consumption + tariff.ConsumptionStDev)/ 1000.0f + scheduleVariables.MaxDischargingRate;
             maxD = Math.Min(maxD, scheduleVariables.MaxDischargingRateCfg);
@@ -309,16 +310,13 @@ public class ChargeScheduleReporter
                 var startDischarging = false;
                 var charge = Math.Round(scheduleVariables.ChargeAmount[tariff.Date].SolutionValue(), 2);
                 var discharge = Math.Round(scheduleVariables.DischargeAmount[tariff.Date].SolutionValue(), 2);
-                charge = charge == 0.0 ? 0.0 : charge;
-                discharge = discharge == 0.0 ? 0.0 : discharge;
-
                 var soc = Math.Round(scheduleVariables.StateOfCharge[tariff.Date].SolutionValue(), 2);
 
-                var chargingStatus = charge > RoundingFactor ? "Y" : " ";
-                var dischargingStatus = discharge > RoundingFactor ? "Y" : " ";
+                var chargingStatus = (charge > discharge + RoundingFactor) ? "Y" : " ";
+                var dischargingStatus = discharge > (charge + RoundingFactor) ? "Y" : " ";
                 if (chargingStatus == "Y")
                     startCharging = true;
-                if (dischargingStatus == "Y")
+                else if (dischargingStatus == "Y")
                     startDischarging = true;
                 var bat_mode = BatteryMode.Standby;
                 if (startCharging)

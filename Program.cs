@@ -55,10 +55,11 @@ app.MapPost("/solver", //async(SolverModel todo) =>
     {
         SolverModel? todo = await request.ReadFromJsonAsync<SolverModel>();
         if (todo == null)
-            throw(new Exception("SolverModel is null!"));
-        //string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
-        //Console.WriteLine(json);   
-
+            throw (new Exception("SolverModel is null!"));
+#if DEBUG
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
+        Console.WriteLine(json);   
+#endif
         var configBuilder = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
@@ -69,7 +70,10 @@ app.MapPost("/solver", //async(SolverModel todo) =>
         var reportHost = builder.Build();
         var reporter = reportHost.Services.GetRequiredService<ChargeScheduleReporter>();
         SolverResults res = await reporter.RunAsync(todo);
-
+#if DEBUG
+        json = Newtonsoft.Json.JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented);
+        Console.WriteLine(json); 
+#endif
         return Results.Created($"/solver/{todo.Id}", res);
     }
     catch (Exception ex)
