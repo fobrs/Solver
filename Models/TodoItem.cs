@@ -14,7 +14,8 @@ public class SolverConfig
     public string? Name { get; set; }
     public bool IsComplete { get; set; }
     public float DefaultConsumptionWithSolar  { get; set; }
-    public float MaxDischarge  { get; set; }
+    public float MaxDischarge { get; set; }
+    public bool UseSolarPowerOnly {get; set;}
     public float Taxes { get; set; }
     public required BatteryConfiguration BatteryConfiguration { get; set; }
     public List<Tariff>? Tariffs { get; set; }

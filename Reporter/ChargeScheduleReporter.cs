@@ -33,7 +33,7 @@ public class ScheduleVariables
 
 public static class OptimizeSchedule
 {
-    public static bool charge_with_solar_only = true;
+    public static bool charge_with_solar_only = false;
     // Use a slightly increased factor to favor discharging on financially interesting moments
     private const double DischargeFactor = 1.01;
 
@@ -56,17 +56,25 @@ public static class OptimizeSchedule
         // Create constraints and objective coefficients
         foreach (var tariff in scheduleVariables.Tariffs)
         {
-            if (charge_with_solar_only)        
+            if (charge_with_solar_only)
                 scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(0.0,
-                    Math.Min( ((tariff.PvMinUsed) >= 0) ?
-                        (tariff.PvMinUsed) : 0 , scheduleVariables.MaxChargingRate),
+                    Math.Min(((tariff.PvMinUsed) >= 0) ?
+                        (tariff.PvMinUsed) : 0, scheduleVariables.MaxChargingRate),
                     $"charge_{tariff.Date}");
-            
-            else
-                scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(   (tariff.PvMinUsed >= 0) ? (tariff.PvMinUsed) : 0.0,
-                scheduleVariables.MaxChargingRate, $"charge_{tariff.Date}");
 
-            var maxD = (tariff.Consumption + tariff.ConsumptionStDev)/ 1000.0f + scheduleVariables.MaxDischargingRate;
+            else
+            {
+                var minV = 0.0;
+                //if (tariff.PvMinUsed >= 0)
+                //    minV = tariff.PvMinUsed;
+                //if (minV > scheduleVariables.MaxChargingRate)
+                //    minV = scheduleVariables.MaxChargingRate;
+                scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(
+                    minV,
+                scheduleVariables.MaxChargingRate, $"charge_{tariff.Date}");
+            }
+
+            var maxD = (tariff.Consumption + tariff.ConsumptionStDev) / 1000.0f + scheduleVariables.MaxDischargingRate;
             maxD = Math.Min(maxD, scheduleVariables.MaxDischargingRateCfg);
             scheduleVariables.DischargeAmount[tariff.Date] = solver.MakeNumVar(0.0, maxD, $"discharge_{tariff.Date}");
             scheduleVariables.StateOfCharge[tariff.Date] = solver.MakeNumVar(0.0, scheduleVariables.CombinedBatteryCapacity, $"soc_{tariff.Date}");
@@ -77,20 +85,28 @@ public static class OptimizeSchedule
             {
                 solver.Add(scheduleVariables.ChargeAmount[tariff.Date] == scheduleVariables.MaxChargingRate);
             }
+            //else
+            {
 
 
-            // Prevent charging and discharging at the same time
-            if (charge_with_solar_only)
-                solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= (((tariff.PvMinUsed) >= 0) ? (tariff.PvMinUsed ) : 0) * scheduleVariables.IsCharging[tariff.Date]);
-            else
-                solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= scheduleVariables.MaxChargingRate * scheduleVariables.IsCharging[tariff.Date]);
+                // Prevent charging and discharging at the same time
+                if (charge_with_solar_only)
+                    solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= (((tariff.PvMinUsed) >= 0) ? (tariff.PvMinUsed) : 0) * scheduleVariables.IsCharging[tariff.Date]);
+                else
+                {
+                    if (tariff.PvMinUsed > 0)
+                        solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= (((tariff.PvMinUsed) >= 0) ? (tariff.PvMinUsed) : 0) * scheduleVariables.IsCharging[tariff.Date]);
+                    else
+                        solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= scheduleVariables.MaxChargingRate * scheduleVariables.IsCharging[tariff.Date]);
+                }
+            }
                 
             solver.Add(scheduleVariables.DischargeAmount[tariff.Date] <= ((tariff.Consumption+tariff.ConsumptionStDev)/1000.0 + scheduleVariables.MaxDischargingRate) * (1 - scheduleVariables.IsCharging[tariff.Date]));
             // Prevent charging and discharging at the same time
 
             // Prevent discharging if SoC is 0
-            solver.Add(scheduleVariables.DischargeAmount[tariff.Date] <= 4 * scheduleVariables.StateOfCharge[tariff.Date]);
-            //solver.Add(scheduleVariables.DischargeAmount[tariff.Date] >= 0.3);
+            solver.Add(scheduleVariables.DischargeAmount[tariff.Date] <= tariff.Part_of_hour * scheduleVariables.StateOfCharge[tariff.Date]);
+            // solver.Add(scheduleVariables.DischargeAmount[tariff.Date] >= 0.3);
 
             // Cost of charging and value of discharging
 
@@ -105,7 +121,10 @@ public static class OptimizeSchedule
             }
             else
             {
-                objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.PriceExported));
+                if (tariff.PvMinUsed > 0)
+                    objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.PriceExported );
+                else
+                     objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.Price);
                 objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], -tariff.Price * DischargeFactor);
             }
         }
@@ -126,6 +145,11 @@ public static class OptimizeSchedule
         }
 
         objective.SetMinimization();
+
+#if DEBUG
+        var str = solver.ExportModelAsLpFormat(false);
+        Console.WriteLine(str);
+#endif
 
         return solver.Solve();
     }
@@ -222,11 +246,13 @@ public class ChargeScheduleReporter
             tariffs[i].PriceExported = tariffs[i].Price;
             if (cfg.SolverConfig.Taxes >= 0)
             {
-                tariffs[i].PriceExported = (tariffs[i].Price - cfg.SolverConfig.Taxes) / VAT;
+                tariffs[i].PriceExported = (tariffs[i].Price - cfg.SolverConfig.Taxes);
                 if (defaultConsumptionWithSolar == 0)
-                    tariffs[i].PvMinUsed = tariffs[i].Pv - ( tariffs[i].Consumption + tariffs[i].ConsumptionStDev) / 1000.0 ;
+                    tariffs[i].PvMinUsed = tariffs[i].Pv - (tariffs[i].Consumption + tariffs[i].ConsumptionStDev) / 1000.0;
                 else
                     tariffs[i].PvMinUsed = tariffs[i].Pv - defaultConsumptionWithSolar;
+                if (tariffs[i].PvMinUsed < 0.0)
+                    tariffs[i].PvMinUsed = 0.0;
             }
         }
 
@@ -279,13 +305,17 @@ public class ChargeScheduleReporter
         Stopwatch stopWatch = new Stopwatch();
         stopWatch.Start();
         // Create the solver that will calculate the most efficient charging
-        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("CLP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
+        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("GLOP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
         // Sets a time limit of 30 seconds.
 
         solver.SetTimeLimit(30 * 1000);
         OptimizeSchedule.taxes = cfg.SolverConfig.Taxes;
-        OptimizeSchedule.charge_with_solar_only = cfg.SolverConfig.DefaultConsumptionWithSolar >= 0.0;
+        OptimizeSchedule.charge_with_solar_only = cfg.SolverConfig.UseSolarPowerOnly;
 
+#if DEBUG
+        // logging during solving
+        solver.EnableOutput();
+#endif
         var resultStatus = OptimizeSchedule.Calculate(solver, scheduleVariables);
 
         stopWatch.Stop();
@@ -348,7 +378,7 @@ public class ChargeScheduleReporter
             {
 
                 //totalCost += delta * ((tariffs[i].Pv - 0.300) > 0 ? 0.0 : tariffs[i].Price) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue();
-                totalCost += tariffs[i].PriceExported * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
+                totalCost += ((tariffs[i].PvMinUsed > 0) ? tariffs[i].PriceExported : tariffs[i].Price) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
                 totalValue += tariffs[i].Price * scheduleVariables.DischargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
             }
 
@@ -366,6 +396,9 @@ public class ChargeScheduleReporter
         else
         {
             res.ResultStatus = "No solution found. Setting battery to zero charging mode.";
+#if DEBUG
+            solver.VerifySolution(-1.0, true);
+#endif
         }
         return res;
     }
