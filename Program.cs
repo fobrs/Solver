@@ -11,7 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-
+var configBuilder = new ConfigurationBuilder()
+                   .SetBasePath(Directory.GetCurrentDirectory())
+                   .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                   .Build();
+builder.Configuration.AddConfiguration(configBuilder);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument(config =>
 {
@@ -20,11 +24,10 @@ builder.Services.AddOpenApiDocument(config =>
     config.Version = "v1";
 });
 
-
+// add our scheduler
+builder.Services.AddTransient<ChargeScheduleReporter>();
 
 var app = builder.Build();
-
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -46,9 +49,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//app.MapPost("/solver", async(SolverModel todo) =>
-//{
-app.MapPost("/solver", //async(SolverModel todo) =>
+
+app.MapPost("/solver", 
    async (HttpRequest request) =>
 {
     try
@@ -60,20 +62,14 @@ app.MapPost("/solver", //async(SolverModel todo) =>
         string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
         Console.WriteLine(json);   
 #endif
-        var configBuilder = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-                    .Build();
-        var builder = Host.CreateApplicationBuilder(args);
-        builder.Configuration.AddConfiguration(configBuilder);
-        builder.Services.AddTransient<ChargeScheduleReporter>();
-        var reportHost = builder.Build();
-        var reporter = reportHost.Services.GetRequiredService<ChargeScheduleReporter>();
+        var reporter = app.Services.GetRequiredService<ChargeScheduleReporter>();
+
         SolverResults res = await reporter.RunAsync(todo);
 #if DEBUG
-        json = Newtonsoft.Json.JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented);
-        Console.WriteLine(json); 
+        var json2 = Newtonsoft.Json.JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented);
+        Console.WriteLine(json2); 
 #endif
+        GC.Collect();
         return Results.Created($"/solver/{todo.Id}", res);
     }
     catch (Exception ex)
