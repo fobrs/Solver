@@ -33,12 +33,12 @@ public class BatteryConfiguration
     /// Stores the latest battery mode.
     /// Possible values: 'zero', 'to_full', 'standby'
     /// </summary>
-    public string BatteryMode { get; set; }
+    public string? BatteryMode { get; set; }
 }
 
 public class Battery
 {
-     public int Id { get; set; }
+    public int Id { get; set; }
     /// <summary>
     /// The capacity in kWh of the battery.
     /// </summary>
@@ -98,7 +98,7 @@ public class Result
     public float ChargeAmount { get; set; }
     public float DischargeAmount { get; set; }
 
-    public string BatteryMode { get; set; }
+    public string? BatteryMode { get; set; }
 
     public float SoC { get; set; }
 

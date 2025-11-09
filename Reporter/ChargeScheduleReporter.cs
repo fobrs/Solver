@@ -113,13 +113,14 @@ public static class OptimizeSchedule
             //if (false /*charge_with_solar_only*/)
             //    objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], (tariff.PvMinUsed) >= 0 ? 0.0 : (tariff.Price - taxes));
             //else
-
+#if FALSE
             if (false /*charge_with_solar_only*/)
             {
                 objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], (tariff.PriceExported));
                 objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], -tariff.Price * DischargeFactor);
             }
             else
+#endif
             {
                 if (tariff.PvMinUsed > 0)
                     objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.PriceExported );
@@ -289,6 +290,7 @@ public class ChargeScheduleReporter
 
         Console.WriteLine("-----------------------------------------------------------");
         Console.WriteLine($"Name:                                         {cfg.SolverConfig.Name}");
+        Console.WriteLine($"Date:                                         {DateTime.Now}");
         Console.WriteLine($"Current battery mode:                         {currentBatteryMode}");
         Console.WriteLine($"Total battery capacity:                       {combinedBatteryCapacity} kWh");
         Console.WriteLine($"Current state of charge (combined):           {currentStateOfCharge:F4} kWh");
