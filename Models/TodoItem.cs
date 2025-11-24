@@ -16,6 +16,7 @@ public class SolverConfig
     public float DefaultConsumptionWithSolar  { get; set; }
     public float MaxDischarge { get; set; }
     public bool UseSolarPowerOnly {get; set;}
+    public bool Pv90 { get; set; }
     public float Taxes { get; set; }
     public required BatteryConfiguration BatteryConfiguration { get; set; }
     public List<Tariff>? Tariffs { get; set; }
@@ -65,6 +66,7 @@ public class Tariff
     public double PriceExported { get; set; } = 0; // calculated
     public bool PricePredicted { get; set; } = false; // indicate if price is from price forecast data
     public double Pv { get; set; }
+    public double Pv90 { get; set; }
     public double PvMinUsed { get; set; }
     public double Consumption { get; set; }
     public double ConsumptionStDev { get; set; }

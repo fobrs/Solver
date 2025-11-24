@@ -126,6 +126,7 @@ public static class OptimizeSchedule
                     objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.PriceExported );
                 else
                      objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.Price);
+                
                 objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], -tariff.Price * DischargeFactor);
             }
         }
@@ -245,7 +246,9 @@ public class ChargeScheduleReporter
         for (var i = 0; i < tariffs.Count; i++)
         {
             tariffs[i].PriceExported = tariffs[i].Price;
-            if (cfg.SolverConfig.Taxes >= 0)
+            if (cfg.SolverConfig.Pv90)
+                tariffs[i].Pv = tariffs[i].Pv90;  // take optimistic solar production
+            //if (cfg.SolverConfig.Taxes >= 0)
             {
                 tariffs[i].PriceExported = (tariffs[i].Price - cfg.SolverConfig.Taxes);
                 if (defaultConsumptionWithSolar == 0)
@@ -290,6 +293,7 @@ public class ChargeScheduleReporter
 
         Console.WriteLine("-----------------------------------------------------------");
         Console.WriteLine($"Name:                                         {cfg.SolverConfig.Name}");
+        Console.WriteLine($"Pv90:                                         {cfg.SolverConfig.Pv90}");
         Console.WriteLine($"Date:                                         {DateTime.Now}");
         Console.WriteLine($"Current battery mode:                         {currentBatteryMode}");
         Console.WriteLine($"Total battery capacity:                       {combinedBatteryCapacity} kWh");
@@ -313,6 +317,7 @@ public class ChargeScheduleReporter
         solver.SetTimeLimit(30 * 1000);
         OptimizeSchedule.taxes = cfg.SolverConfig.Taxes;
         OptimizeSchedule.charge_with_solar_only = cfg.SolverConfig.UseSolarPowerOnly;
+
 
 #if DEBUG
         // logging during solving
@@ -380,7 +385,10 @@ public class ChargeScheduleReporter
             {
 
                 //totalCost += delta * ((tariffs[i].Pv - 0.300) > 0 ? 0.0 : tariffs[i].Price) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue();
-                totalCost += ((tariffs[i].PvMinUsed > 0) ? tariffs[i].PriceExported : tariffs[i].Price) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
+                totalCost += (((tariffs[i].PvMinUsed > 0) ? tariffs[i].PriceExported : tariffs[i].Price)) *
+                    scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
+
+
                 totalValue += tariffs[i].Price * scheduleVariables.DischargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
             }
 
