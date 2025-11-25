@@ -54,8 +54,11 @@ public static class OptimizeSchedule
 
        
         // Create constraints and objective coefficients
+        //int j = 0;
         foreach (var tariff in scheduleVariables.Tariffs)
         {
+          //  if (j++ == 0)
+            //    continue;
             if (charge_with_solar_only)
                 scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(0.0,
                     Math.Min(((tariff.PvMinUsed) >= 0) ?
@@ -85,7 +88,7 @@ public static class OptimizeSchedule
             {
                 solver.Add(scheduleVariables.ChargeAmount[tariff.Date] == scheduleVariables.MaxChargingRate);
             }
-            //else
+            else
             {
 
 
@@ -133,17 +136,37 @@ public static class OptimizeSchedule
 
         // Set initial state of charge
         solver.Add(scheduleVariables.StateOfCharge[scheduleVariables.Tariffs[0].Date] == scheduleVariables.CurrentStateOfCharge);
+ //       solver.Add(scheduleVariables.ChargeAmount[scheduleVariables.Tariffs[0].Date] == scheduleVariables.CurrentStateOfCharge);
+ //       scheduleVariables.Tariffs[0].Price = 0.0;
+ //       solver.Add(scheduleVariables.DischargeAmount[scheduleVariables.Tariffs[0].Date] == 0);
+ //       solver.Add(scheduleVariables.StateOfCharge[scheduleVariables.Tariffs[1].Date] == scheduleVariables.CurrentStateOfCharge);
 
         // Battery state evolution
         for (var i = 1; i < scheduleVariables.Tariffs.Count; i++)
         {
-            var prevHour = scheduleVariables.Tariffs[i - 1].Date;
+            
             var currHour = scheduleVariables.Tariffs[i].Date;
             float delta = 1.0f / scheduleVariables.Tariffs[i-1].Part_of_hour;
+#if FALSE
+            if (i == 0)
 
+                solver.Add(scheduleVariables.StateOfCharge[currHour] == scheduleVariables.CurrentStateOfCharge 
+                    + delta * scheduleVariables.ChargeAmount[currHour] * scheduleVariables.ChargingEfficiency
+                    - delta * scheduleVariables.DischargeAmount[currHour] / scheduleVariables.DischargingEfficiency);
+
+            else
+            {
+                var prevHour = scheduleVariables.Tariffs[i - 1].Date;
+                solver.Add(scheduleVariables.StateOfCharge[currHour] == scheduleVariables.StateOfCharge[prevHour]
+                    + delta * scheduleVariables.ChargeAmount[currHour] * scheduleVariables.ChargingEfficiency
+                    - delta * scheduleVariables.DischargeAmount[currHour] / scheduleVariables.DischargingEfficiency);
+            }
+#else
+            var prevHour = scheduleVariables.Tariffs[i - 1].Date;
             solver.Add(scheduleVariables.StateOfCharge[currHour] == scheduleVariables.StateOfCharge[prevHour]
                 + delta * scheduleVariables.ChargeAmount[prevHour] * scheduleVariables.ChargingEfficiency
                 - delta * scheduleVariables.DischargeAmount[prevHour] / scheduleVariables.DischargingEfficiency);
+#endif
         }
 
         objective.SetMinimization();
@@ -246,8 +269,8 @@ public class ChargeScheduleReporter
         for (var i = 0; i < tariffs.Count; i++)
         {
             tariffs[i].PriceExported = tariffs[i].Price;
-            if (cfg.SolverConfig.Pv90)
-                tariffs[i].Pv = tariffs[i].Pv90;  // take optimistic solar production
+            if (cfg.SolverConfig.Pv90 && tariffs[i].Pv90 > 0.0)
+                tariffs[i].Pv = (tariffs[i].Pv + tariffs[i].Pv90)/2.0;  // take optimistic solar production
             //if (cfg.SolverConfig.Taxes >= 0)
             {
                 tariffs[i].PriceExported = (tariffs[i].Price - cfg.SolverConfig.Taxes);
@@ -260,6 +283,13 @@ public class ChargeScheduleReporter
             }
         }
 
+#if FALSE
+        tariffs.Insert(0, tariffs[0]);
+        tariffs[0].Date.AddMinutes(-60.0 / tariffs[0].Part_of_hour);
+        tariffs[0].Pv = tariffs[0].Pv90 = 0.0;
+        tariffs[0].PvMinUsed = 0;
+        tariffs[0].Price = 0.0; // price of inital SoC
+#endif
 
         var scheduleVariables = new ScheduleVariables
         {
