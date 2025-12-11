@@ -82,6 +82,16 @@ public struct BatteryMode
     public const string Zero = "zero";
 
     /// <summary>
+    /// NOM modus, battery only charges .
+    /// </summary>
+    public const string ZeroC = "zero_c";
+    
+      /// <summary>
+    /// NOM modus, battery only discharges.
+    /// </summary>
+    public const string ZeroD = "zero_d";
+
+    /// <summary>
     /// Forced full charge mode, battery will charge to 100% regardless of consumption.
     /// </summary>
     public const string ToFull = "to_full";
@@ -99,6 +109,8 @@ public class Result
 
     public float ChargeAmount { get; set; }
     public float DischargeAmount { get; set; }
+
+    public double PvMinUsed { get; set;  }
 
     public string? BatteryMode { get; set; }
 

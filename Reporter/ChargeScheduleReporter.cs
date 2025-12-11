@@ -378,6 +378,7 @@ public class ChargeScheduleReporter
                 var charge = Math.Round(scheduleVariables.ChargeAmount[tariff.Date].SolutionValue(), 2);
                 var discharge = Math.Round(scheduleVariables.DischargeAmount[tariff.Date].SolutionValue(), 2);
                 var soc = Math.Round(scheduleVariables.StateOfCharge[tariff.Date].SolutionValue(), 2);
+                var Soc = (float)(soc / combinedBatteryCapacity);
 
                 var chargingStatus = (charge > discharge + RoundingFactor) ? "Y" : " ";
                 var dischargingStatus = discharge > (charge + RoundingFactor) ? "Y" : " ";
@@ -391,15 +392,45 @@ public class ChargeScheduleReporter
                 else if (startDischarging)
                     bat_mode = BatteryMode.Zero;
 
+                // check if there is about a misch solar than 
+                // charge amount -->  ZeroC 
+                if (bat_mode == BatteryMode.ToFull && tariff.PvMinUsed > 0.0)
+                {
+                    if (Math.Abs(tariff.PvMinUsed - charge) < 0.1 + discharge)
+                        bat_mode = BatteryMode.ZeroC;
+                }
+                // if SoC is full -> Zero
+                if (bat_mode == BatteryMode.ToFull &&  Soc > 0.98)
+                {
+                    bat_mode = BatteryMode.Zero;
+                }
+                // if there is much more solar than charge
+                // -> ZeroD
+                if (bat_mode == BatteryMode.ToFull 
+                    && tariff.PvMinUsed > 0.0
+                    && charge < tariff.PvMinUsed
+                    && charge < cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0)
+                {
+                    bat_mode = BatteryMode.ZeroD;
+                }
+                // if charge is almost max and there is solar
+                // -> Zero (load load max from solar)
+                if (bat_mode == BatteryMode.ToFull
+                    && tariff.PvMinUsed > 0.0
+                    && charge > cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0)
+                {
+                    bat_mode = BatteryMode.Zero;
+                }
                 res.Results.Add(new Result
                 {
                     Date = tariff.Date,
                     Price = tariff.Price,
                     Part_of_hour = tariff.Part_of_hour,
+                    PvMinUsed = tariff.PvMinUsed,
                     PricePredicted = tariff.PricePredicted,
                     ChargeAmount = (float)charge,
                     DischargeAmount = (float)discharge,
-                    SoC = (float)(soc / combinedBatteryCapacity),
+                    SoC = Soc,
                     BatteryMode = bat_mode
                 });
 
