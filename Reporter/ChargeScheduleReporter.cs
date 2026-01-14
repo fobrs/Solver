@@ -27,6 +27,8 @@ public class ScheduleVariables
     public double ChargingEfficiency { get; init; }
     public double DischargingEfficiency { get; init; }
     public double DefaultConsumptionWithSolar { get; set; }
+
+    public double MinPriceForAlwaysCharge   { get; set; }
 }
 
 
@@ -84,7 +86,7 @@ public static class OptimizeSchedule
             scheduleVariables.IsCharging[tariff.Date] = solver.MakeIntVar(0, 1, $"isCharging_{tariff.Date}");
 
             // Always charge at maximum rate during negative tariffs
-            if (tariff.Price < 0)
+            if (tariff.Price < scheduleVariables.MinPriceForAlwaysCharge)
             {
                 solver.Add(scheduleVariables.ChargeAmount[tariff.Date] == scheduleVariables.MaxChargingRate);
             }
@@ -249,6 +251,7 @@ public class ChargeScheduleReporter
 
         var combinedBatteryCapacity = batteryCfg.Batteries.Sum(s => s.CapacityKWh);
         var currentStateOfCharge = batteryCfg.Batteries.Select((soc, index) => soc.StateOfChargePercentage * batteryCfg.Batteries[index].CapacityKWh / 100.0).Sum();
+        var minPriceForAlwaysCharge = batteryCfg.MinPriceForAlwaysCharge;
 
         if (currentStateOfCharge is null)
         {
@@ -301,7 +304,8 @@ public class ChargeScheduleReporter
             CurrentStateOfCharge = (double)currentStateOfCharge,
             ChargingEfficiency = chargingEfficiency,
             DischargingEfficiency = dischargingEfficiency,
-            DefaultConsumptionWithSolar = defaultConsumptionWithSolar
+            DefaultConsumptionWithSolar = defaultConsumptionWithSolar,
+            MinPriceForAlwaysCharge = minPriceForAlwaysCharge
         };
 
         // var currentHousePowerUsage = await batteryController.GetLatestPowerMeasurementAsync();

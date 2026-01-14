@@ -29,6 +29,7 @@ public class BatteryConfiguration
     public required double MaxDischargeRateKWh { get; set; }
     public required double ChargingEfficiency { get; set; }
     public required double DischargingEfficiency { get; set; }
+    public required double MinPriceForAlwaysCharge  { get; set; }
 
     /// <summary>
     /// Stores the latest battery mode.
