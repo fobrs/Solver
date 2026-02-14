@@ -81,6 +81,7 @@ public static class OptimizeSchedule
 
             var maxD = (tariff.Consumption + tariff.ConsumptionStDev) / 1000.0f + scheduleVariables.MaxDischargingRate;
             maxD = Math.Min(maxD, scheduleVariables.MaxDischargingRateCfg);
+           // Console.WriteLine("MxD: {0}", maxD);
             scheduleVariables.DischargeAmount[tariff.Date] = solver.MakeNumVar(0.0, maxD, $"discharge_{tariff.Date}");
             scheduleVariables.StateOfCharge[tariff.Date] = solver.MakeNumVar(0.0, scheduleVariables.CombinedBatteryCapacity, $"soc_{tariff.Date}");
             scheduleVariables.IsCharging[tariff.Date] = solver.MakeIntVar(0, 1, $"isCharging_{tariff.Date}");
@@ -105,7 +106,7 @@ public static class OptimizeSchedule
                         solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= scheduleVariables.MaxChargingRate * scheduleVariables.IsCharging[tariff.Date]);
                 }
             }
-                
+            //Console.WriteLine("1: {0}", (tariff.Consumption + tariff.ConsumptionStDev) / 1000.0 + scheduleVariables.MaxDischargingRate);
             solver.Add(scheduleVariables.DischargeAmount[tariff.Date] <= ((tariff.Consumption+tariff.ConsumptionStDev)/1000.0 + scheduleVariables.MaxDischargingRate) * (1 - scheduleVariables.IsCharging[tariff.Date]));
             // Prevent charging and discharging at the same time
 
@@ -259,44 +260,52 @@ public class ChargeScheduleReporter
             Console.WriteLine(res.ResultStatus);
             return res;
         }
+        List<Tariff> Tariffs = new List<Tariff>();
+
         // fill in part_of_hour
         for (var i = 1; i < tariffs.Count; i++)
         {
             var prevHour = tariffs[i - 1].Date;
             var currHour = tariffs[i].Date;
             float delta = (currHour.ToUnixTimeSeconds() - prevHour.ToUnixTimeSeconds()) / 3600.0f;
-            tariffs[i - 1].Part_of_hour = 1.0f / delta;
+            if (delta > 0)
+            {
+                tariffs[i - 1].Part_of_hour = 1.0f / delta;
+            }
         }
         tariffs[tariffs.Count - 1].Part_of_hour = tariffs[tariffs.Count - 2].Part_of_hour;
 
+        List<Tariff> _tariffs = new List<Tariff>();
         for (var i = 0; i < tariffs.Count; i++)
         {
-            tariffs[i].PriceExported = tariffs[i].Price;
-            if (cfg.SolverConfig.Pv90 && tariffs[i].Pv90 > 0.0)
-                tariffs[i].Pv = (tariffs[i].Pv + tariffs[i].Pv90)/2.0;  // take optimistic solar production
-            //if (cfg.SolverConfig.Taxes >= 0)
+            if (tariffs[i].Part_of_hour > 0.0f)
             {
-                tariffs[i].PriceExported = (tariffs[i].Price - cfg.SolverConfig.Taxes);
-                if (defaultConsumptionWithSolar == 0)
-                    tariffs[i].PvMinUsed = tariffs[i].Pv - (tariffs[i].Consumption + tariffs[i].ConsumptionStDev) / 1000.0;
-                else
-                    tariffs[i].PvMinUsed = tariffs[i].Pv - defaultConsumptionWithSolar;
-                if (tariffs[i].PvMinUsed < 0.0)
-                    tariffs[i].PvMinUsed = 0.0;
+                _tariffs.Add(tariffs[i]);
             }
         }
 
-#if FALSE
-        tariffs.Insert(0, tariffs[0]);
-        tariffs[0].Date.AddMinutes(-60.0 / tariffs[0].Part_of_hour);
-        tariffs[0].Pv = tariffs[0].Pv90 = 0.0;
-        tariffs[0].PvMinUsed = 0;
-        tariffs[0].Price = 0.0; // price of inital SoC
-#endif
+        for (var i = 0; i < _tariffs.Count; i++)
+        {
+            _tariffs[i].PriceExported = _tariffs[i].Price;
+            if (cfg.SolverConfig.Pv90 && _tariffs[i].Pv90 > 0.0)
+                _tariffs[i].Pv = (_tariffs[i].Pv + _tariffs[i].Pv90)/2.0;  // take optimistic solar production
+            //if (cfg.SolverConfig.Taxes >= 0)
+            {
+                _tariffs[i].PriceExported = (_tariffs[i].Price - cfg.SolverConfig.Taxes);
+                if (defaultConsumptionWithSolar == 0)
+                    _tariffs[i].PvMinUsed = _tariffs[i].Pv - (_tariffs[i].Consumption + _tariffs[i].ConsumptionStDev) / 1000.0;
+                else
+                    _tariffs[i].PvMinUsed = _tariffs[i].Pv - defaultConsumptionWithSolar;
+                if (_tariffs[i].PvMinUsed < 0.0)
+                    _tariffs[i].PvMinUsed = 0.0;
+            }
+        }
+        //string json = Newtonsoft.Json.JsonConvert.SerializeObject(todo, Newtonsoft.Json.Formatting.Indented);
+        //Console.WriteLine(json);
 
         var scheduleVariables = new ScheduleVariables
         {
-            Tariffs = tariffs,
+            Tariffs = _tariffs,
             MaxChargingRate = maxChargingRate,
             MaxDischargingRate = maxDischargingRate,
             MaxDischargingRateCfg = maxDischargingRateCfg,
@@ -312,9 +321,9 @@ public class ChargeScheduleReporter
 
         // lowest and highest tariff today
         //var todayTariffs = tariffs.Where(t => TimeZoneInfo.ConvertTime(t.Date, timeZone).Date == TimeZoneInfo.ConvertTime(currentUtcDateTime.Date, timeZone)).ToList();
-        var lowestTariff = tariffs.Min(t => t.Price);
-        var highestTariff = tariffs.Max(t => t.Price);
-        var averageTariff = tariffs.Average(t => t.Price);
+        var lowestTariff = _tariffs.Min(t => t.Price);
+        var highestTariff = _tariffs.Max(t => t.Price);
+        var averageTariff = _tariffs.Average(t => t.Price);
 
         //var currentTariff = tariffs.SingleOrDefault(s => s.Date == currentUtcDateTime);
         //if (currentTariff == null)
@@ -345,7 +354,7 @@ public class ChargeScheduleReporter
         Stopwatch stopWatch = new Stopwatch();
         stopWatch.Start();
         // Create the solver that will calculate the most efficient charging
-        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("GLOP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
+        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("SCIP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
         // Sets a time limit of 30 seconds.
 
         solver.SetTimeLimit(30 * 1000);
@@ -375,7 +384,7 @@ public class ChargeScheduleReporter
             res.ResultStatus = resultStatus.ToString();
             res.Results = new List<Result>();
 
-            foreach (var tariff in tariffs)
+            foreach (var tariff in _tariffs)
             {
                 var startCharging = false;
                 var startDischarging = false;
@@ -446,15 +455,15 @@ public class ChargeScheduleReporter
             // Calculate net cost
             var totalCost = 0.0;
             var totalValue = 0.0;
-            for (int i = 0; i < tariffs.Count; i++)
+            for (int i = 0; i < _tariffs.Count; i++)
             {
 
                 //totalCost += delta * ((tariffs[i].Pv - 0.300) > 0 ? 0.0 : tariffs[i].Price) * scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue();
-                totalCost += (((tariffs[i].PvMinUsed > 0) ? tariffs[i].PriceExported : tariffs[i].Price)) *
-                    scheduleVariables.ChargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
+                totalCost += (((_tariffs[i].PvMinUsed > 0) ? _tariffs[i].PriceExported : _tariffs[i].Price)) *
+                    scheduleVariables.ChargeAmount[_tariffs[i].Date].SolutionValue() / _tariffs[i].Part_of_hour;
 
 
-                totalValue += tariffs[i].Price * scheduleVariables.DischargeAmount[tariffs[i].Date].SolutionValue() / tariffs[i].Part_of_hour;
+                totalValue += _tariffs[i].Price * scheduleVariables.DischargeAmount[_tariffs[i].Date].SolutionValue() / _tariffs[i].Part_of_hour;
             }
 
             res.IsComplete = true;
