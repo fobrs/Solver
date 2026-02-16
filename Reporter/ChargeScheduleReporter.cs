@@ -129,11 +129,11 @@ public static class OptimizeSchedule
 #endif
             {
                 if (tariff.PvMinUsed > 0)
-                    objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.PriceExported );
+                    objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.PriceExported / tariff.Part_of_hour);
                 else
-                     objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.Price);
+                     objective.SetCoefficient(scheduleVariables.ChargeAmount[tariff.Date], tariff.Price  / tariff.Part_of_hour);
                 
-                objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], -tariff.Price * DischargeFactor);
+                objective.SetCoefficient(scheduleVariables.DischargeAmount[tariff.Date], -tariff.Price * DischargeFactor / tariff.Part_of_hour);
             }
         }
 
