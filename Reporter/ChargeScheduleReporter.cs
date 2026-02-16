@@ -332,7 +332,7 @@ public class ChargeScheduleReporter
         }
 
         var currentBatteryMode = batteryCfg.BatteryMode;
-        var SolverModel = "SCIP";
+        var SolverModel = "GLOP";
 
         Console.WriteLine("-----------------------------------------------------------");
         Console.WriteLine($"Name:                                         {cfg.SolverConfig.Name}");
