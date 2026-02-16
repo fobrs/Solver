@@ -332,6 +332,7 @@ public class ChargeScheduleReporter
         }
 
         var currentBatteryMode = batteryCfg.BatteryMode;
+        var SolverModel = "SCIP";
 
         Console.WriteLine("-----------------------------------------------------------");
         Console.WriteLine($"Name:                                         {cfg.SolverConfig.Name}");
@@ -341,7 +342,7 @@ public class ChargeScheduleReporter
         Console.WriteLine($"Total battery capacity:                       {combinedBatteryCapacity} kWh");
         Console.WriteLine($"Current state of charge (combined):           {currentStateOfCharge:F4} kWh");
         //Console.WriteLine($"Current house power consumption / production: {currentHousePowerUsage} Watt");
-        Console.WriteLine($"Current tariff:                               {currentTariff.Price:F4} / kWh");
+        Console.WriteLine($"Current tariff:                               {_tariffs[0].Price:F4} / kWh");
         Console.WriteLine($"Lowest tariff today:                          {lowestTariff:F4} / kWh");
         Console.WriteLine($"Highest tariff today:                         {highestTariff:F4} / kWh");
         Console.WriteLine($"Average tariff today:                         {averageTariff:F4} / kWh");
@@ -349,11 +350,11 @@ public class ChargeScheduleReporter
         Console.WriteLine($"Discharging efficiency:                       {dischargingEfficiency * 100} %");
         Console.WriteLine("-----------------------------------------------------------");
 
-        Console.WriteLine("Starting calculation of optimal charging schedule...");
+        Console.WriteLine("Starting calculation of optimal charging schedule using solver '{0}' ...", SolverModel);
         Stopwatch stopWatch = new Stopwatch();
         stopWatch.Start();
         // Create the solver that will calculate the most efficient charging
-        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("GLOP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
+        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver(SolverModel) ?? throw new InvalidOperationException("Failed to create SCIP solver");
         // Sets a time limit of 30 seconds.
 
         solver.SetTimeLimit(30 * 1000);
