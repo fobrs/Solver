@@ -325,12 +325,11 @@ public class ChargeScheduleReporter
         var highestTariff = _tariffs.Max(t => t.Price);
         var averageTariff = _tariffs.Average(t => t.Price);
 
-        //var currentTariff = tariffs.SingleOrDefault(s => s.Date == currentUtcDateTime);
-        //if (currentTariff == null)
-        //{
-        //    Console.WriteLine($"No current tariff found for the current hour {currentUtcDateTime}. This should never happen.");
-        //    return;
-        //}
+        var currentTariff = _tariffs[0];
+        if (currentTariff == null)
+        {
+            Console.WriteLine($"No current tariff found for the current hour {currentUtcDateTime}. This should never happen.");
+        }
 
         var currentBatteryMode = batteryCfg.BatteryMode;
 
@@ -342,7 +341,7 @@ public class ChargeScheduleReporter
         Console.WriteLine($"Total battery capacity:                       {combinedBatteryCapacity} kWh");
         Console.WriteLine($"Current state of charge (combined):           {currentStateOfCharge:F4} kWh");
         //Console.WriteLine($"Current house power consumption / production: {currentHousePowerUsage} Watt");
-        //Console.WriteLine($"Current tariff:                               {currentTariff.Price:F4} / kWh");
+        Console.WriteLine($"Current tariff:                               {currentTariff.Price:F4} / kWh");
         Console.WriteLine($"Lowest tariff today:                          {lowestTariff:F4} / kWh");
         Console.WriteLine($"Highest tariff today:                         {highestTariff:F4} / kWh");
         Console.WriteLine($"Average tariff today:                         {averageTariff:F4} / kWh");
@@ -354,7 +353,7 @@ public class ChargeScheduleReporter
         Stopwatch stopWatch = new Stopwatch();
         stopWatch.Start();
         // Create the solver that will calculate the most efficient charging
-        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("SCIP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
+        using var solver = Google.OrTools.LinearSolver.Solver.CreateSolver("GLOP") ?? throw new InvalidOperationException("Failed to create SCIP solver");
         // Sets a time limit of 30 seconds.
 
         solver.SetTimeLimit(30 * 1000);
@@ -415,7 +414,7 @@ public class ChargeScheduleReporter
                 // if SoC is full -> Zero
                 if (bat_mode == BatteryMode.ToFull &&  Soc > 0.98)
                 {
-                    bat_mode = BatteryMode.Zero;
+                    bat_mode = BatteryMode.ZeroC;
                 }
                 // if there is much more solar than charge
                 // -> ZeroD
@@ -432,7 +431,7 @@ public class ChargeScheduleReporter
                     && tariff.PvMinUsed > 0.0
                     && charge > cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0)
                 {
-                    bat_mode = BatteryMode.Zero;
+                    bat_mode = BatteryMode.ZeroC;
                 }
                 res.Results.Add(new Result
                 {
