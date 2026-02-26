@@ -87,7 +87,8 @@ public static class OptimizeSchedule
             scheduleVariables.IsCharging[tariff.Date] = solver.MakeIntVar(0, 1, $"isCharging_{tariff.Date}");
 
             // Always charge at maximum rate during negative tariffs
-            if (tariff.Price <= scheduleVariables.MinPriceForAlwaysCharge)
+            if (tariff.Price <= scheduleVariables.MinPriceForAlwaysCharge &&
+                scheduleVariables.StateOfCharge[tariff.Date] <= scheduleVariables.CombinedBatteryCapacity * 0.98)
             {
                 solver.Add(scheduleVariables.ChargeAmount[tariff.Date] == scheduleVariables.MaxChargingRate);
             }
@@ -346,6 +347,7 @@ public class ChargeScheduleReporter
         Console.WriteLine($"Lowest tariff today:                          {lowestTariff:F4} / kWh");
         Console.WriteLine($"Highest tariff today:                         {highestTariff:F4} / kWh");
         Console.WriteLine($"Average tariff today:                         {averageTariff:F4} / kWh");
+        Console.WriteLine($"MinPriceForAlwaysCharge:                      {batteryCfg.MinPriceForAlwaysCharge:F4} / kWh");
         Console.WriteLine($"Charging efficiency:                          {chargingEfficiency * 100} %");
         Console.WriteLine($"Discharging efficiency:                       {dischargingEfficiency * 100} %");
         Console.WriteLine("-----------------------------------------------------------");
@@ -360,7 +362,6 @@ public class ChargeScheduleReporter
         solver.SetTimeLimit(30 * 1000);
         OptimizeSchedule.taxes = cfg.SolverConfig.Taxes;
         OptimizeSchedule.charge_with_solar_only = cfg.SolverConfig.UseSolarPowerOnly;
-
 
 #if DEBUG
         // logging during solving
