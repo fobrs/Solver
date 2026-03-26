@@ -226,7 +226,7 @@ public class ChargeScheduleReporter
         //    return;
         //}
         var tariffs = cfg.SolverConfig.Tariffs;
-        if (tariffs == null || tariffs.Count == 0)
+        if (tariffs == null || tariffs.Count < 2)
         {
             res.ResultStatus = "No current tariffs available in the tariff list.";
             Console.WriteLine(res.ResultStatus);
