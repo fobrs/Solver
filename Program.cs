@@ -64,7 +64,8 @@ app.MapPost("/solver",
 #endif
         var reporter = app.Services.GetRequiredService<ChargeScheduleReporter>();
 
-        SolverResults res = await reporter.RunAsync(todo);
+        SolverResults res = await reporter.RunAsync(todo, true);
+       // SolverResults res_solar_load = await reporter.RunAsync(todo, 0);
 #if DEBUG
         var json2 = Newtonsoft.Json.JsonConvert.SerializeObject(res, Newtonsoft.Json.Formatting.Indented);
         Console.WriteLine(json2); 
