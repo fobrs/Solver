@@ -59,9 +59,12 @@ public static class OptimizeSchedule
         //int j = 0;
         foreach (var tariff in scheduleVariables.Tariffs)
         {
-          //  if (j++ == 0)
+            //  if (j++ == 0)
             //    continue;
-            if (charge_with_solar_only)
+#if DEBUG
+            Console.WriteLine("{0}: pv: {1}, pvminused: {2}, consumption: {3}", tariff.Date, tariff.Pv90, tariff.PvMinUsed, tariff.Consumption + tariff.ConsumptionStDev);
+#endif
+            if (charge_with_solar_only || tariff.PvMinUsed > 0.0)
                 scheduleVariables.ChargeAmount[tariff.Date] = solver.MakeNumVar(0.0,
                     Math.Min(((tariff.PvMinUsed) >= 0) ?
                         (tariff.PvMinUsed) : 0, scheduleVariables.MaxChargingRate),
@@ -70,7 +73,7 @@ public static class OptimizeSchedule
             else
             {
                 var minV = 0.0;
-                //if (tariff.PvMinUsed >= 0)
+                //if (tariff.PvMinUsed > 0)
                 //    minV = tariff.PvMinUsed;
                 //if (minV > scheduleVariables.MaxChargingRate)
                 //    minV = scheduleVariables.MaxChargingRate;
@@ -80,9 +83,15 @@ public static class OptimizeSchedule
             }
 
             var maxD = (tariff.Consumption + tariff.ConsumptionStDev) / 1000.0f + scheduleVariables.MaxDischargingRate;
+            //var maxD = tariff.PvMinUsed + scheduleVariables.MaxDischargingRate;
+            if (maxD < 0)
+                maxD = 0.0;
             maxD = Math.Min(maxD, scheduleVariables.MaxDischargingRateCfg);
-           // Console.WriteLine("MxD: {0}", maxD);
+            // Console.WriteLine("MxD: {0}", maxD);
+            if (tariff.PvMinUsed > 0)
+                maxD = 0.0;
             scheduleVariables.DischargeAmount[tariff.Date] = solver.MakeNumVar(0.0, maxD, $"discharge_{tariff.Date}");
+
             scheduleVariables.StateOfCharge[tariff.Date] = solver.MakeNumVar(0.0, scheduleVariables.CombinedBatteryCapacity, $"soc_{tariff.Date}");
             scheduleVariables.IsCharging[tariff.Date] = solver.MakeIntVar(0, 1, $"isCharging_{tariff.Date}");
 
@@ -94,8 +103,6 @@ public static class OptimizeSchedule
             }
             else
             {
-
-
                 // Prevent charging and discharging at the same time
                 if (charge_with_solar_only)
                     solver.Add(scheduleVariables.ChargeAmount[tariff.Date] <= (((tariff.PvMinUsed) >= 0) ? (tariff.PvMinUsed) : 0) * scheduleVariables.IsCharging[tariff.Date]);
@@ -201,7 +208,7 @@ public class ChargeScheduleReporter
         config = _config.CurrentValue;
     }
 
-    public async Task<SolverResults> RunAsync(SolverModel todo)
+    public async Task<SolverResults> RunAsync(SolverModel todo, bool net_load)
     {
         await Task.Delay(1);
         SolverResults res = new SolverResults();
