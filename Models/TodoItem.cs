@@ -18,6 +18,7 @@ public class SolverConfig
     public bool UseSolarPowerOnly {get; set;}
     public bool Pv90 { get; set; }
     public float Taxes { get; set; }
+    public float ConsumptionStDevFactor {  get; set; }
     public required BatteryConfiguration BatteryConfiguration { get; set; }
     public List<Tariff>? Tariffs { get; set; }
 }

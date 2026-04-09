@@ -300,6 +300,7 @@ public class ChargeScheduleReporter
             //if (cfg.SolverConfig.Taxes >= 0)
             {
                 _tariffs[i].PriceExported = (_tariffs[i].Price - cfg.SolverConfig.Taxes);
+                _tariffs[i].ConsumptionStDev = _tariffs[i].ConsumptionStDev * cfg.SolverConfig.ConsumptionStDevFactor;
                 if (defaultConsumptionWithSolar == 0)
                     _tariffs[i].PvMinUsed = _tariffs[i].Pv - (_tariffs[i].Consumption + _tariffs[i].ConsumptionStDev) / 1000.0;
                 else
