@@ -358,6 +358,7 @@ public class ChargeScheduleReporter
         Console.WriteLine($"MinPriceForAlwaysCharge:                      {batteryCfg.MinPriceForAlwaysCharge:F4} / kWh");
         Console.WriteLine($"Charging efficiency:                          {chargingEfficiency * 100} %");
         Console.WriteLine($"Discharging efficiency:                       {dischargingEfficiency * 100} %");
+        Console.WriteLine($"Consumption standard deviation factor:        {cfg.SolverConfig.ConsumptionStDevFactor}");
         Console.WriteLine("-----------------------------------------------------------");
 
         Console.WriteLine("Starting calculation of optimal charging schedule using solver '{0}' ...", SolverModel);
