@@ -95,6 +95,12 @@ public static class OptimizeSchedule
             scheduleVariables.StateOfCharge[tariff.Date] = solver.MakeNumVar(0.0, scheduleVariables.CombinedBatteryCapacity, $"soc_{tariff.Date}");
             scheduleVariables.IsCharging[tariff.Date] = solver.MakeIntVar(0, 1, $"isCharging_{tariff.Date}");
 
+            if (tariff.Price < 0.00)
+            {
+                // Prevent discharging during negative tariffs
+                solver.Add(scheduleVariables.DischargeAmount[tariff.Date] == 0);
+            }
+
             // Always charge at maximum rate during negative tariffs
             if (tariff.Price <= scheduleVariables.MinPriceForAlwaysCharge &&
                 scheduleVariables.StateOfCharge[tariff.Date] <= scheduleVariables.CombinedBatteryCapacity * 0.98)
@@ -433,7 +439,8 @@ public class ChargeScheduleReporter
                     && tariff.PvMinUsed > 0.0
                     && charge < tariff.PvMinUsed
                     && tariff.Price > 0.0
-                    && charge < cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0)
+                    && charge < cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0
+                    && discharge > 0.0 )
                 {
                     bat_mode = BatteryMode.ZeroD;
                 }
