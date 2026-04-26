@@ -417,7 +417,7 @@ public class ChargeScheduleReporter
 
                 // check if there is about a misch solar than 
                 // charge amount -->  ZeroC 
-                if (bat_mode == BatteryMode.ToFull && tariff.PvMinUsed > 0.0)
+                if (bat_mode == BatteryMode.ToFull && tariff.PvMinUsed > 0.0 && tariff.Price > 0.0)
                 {
                     if (Math.Abs(tariff.PvMinUsed - charge) < 0.1 + discharge)
                         bat_mode = BatteryMode.ZeroC;
@@ -432,6 +432,7 @@ public class ChargeScheduleReporter
                 if (bat_mode == BatteryMode.ToFull 
                     && tariff.PvMinUsed > 0.0
                     && charge < tariff.PvMinUsed
+                    && tariff.Price > 0.0
                     && charge < cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0)
                 {
                     bat_mode = BatteryMode.ZeroD;
@@ -440,6 +441,7 @@ public class ChargeScheduleReporter
                 // -> Zero (load load max from solar)
                 if (bat_mode == BatteryMode.ToFull
                     && tariff.PvMinUsed > 0.0
+                    && tariff.Price > 0.0
                     && charge > cfg.SolverConfig.BatteryConfiguration.MaxChargeRateKWh * 2.0 / 3.0)
                 {
                     bat_mode = BatteryMode.ZeroC;
